@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f5f5f5; }
+        .header { margin-bottom: 20px; }
+        .footer { margin-top: 20px; font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Leave Requests Report - {{ department }}</h1>
+        <p>Generated on: {{ generated_date }}</p>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Employee</th>
+                <th>Leave Type</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Duration</th>
+                <th>Status</th>
+                <th>Department</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for request in requests %}
+            <tr>
+                <td>{{ request.Employee }}</td>
+                <td>{{ request['Leave Type'] }}</td>
+                <td>{{ request['Start Date'] }}</td>
+                <td>{{ request['End Date'] }}</td>
+                <td>{{ request.Duration }}</td>
+                <td>{{ request.Status }}</td>
+                <td>{{ request.Department }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div class="footer">
+        <p>Innovative Software Technologies Limited Africa Kenya</p>
+    </div>
+</body>
+</html>

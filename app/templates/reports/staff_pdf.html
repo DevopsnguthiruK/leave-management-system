@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { 
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 20px;
+        }
+        .company-info h1 {
+            margin: 0;
+            color: #333;
+            font-size: 24px;
+        }
+        .company-info p {
+            margin: 5px 0;
+            color: #666;
+        }
+        .logo {
+            width: 180px; /* Adjust as needed */
+            height: auto;
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 20px; 
+        }
+        th, td { 
+            border: 1px solid #ddd; 
+            padding: 8px; 
+            text-align: left; 
+        }
+        th { 
+            background-color: #f5f5f5; 
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            font-size: 12px;
+            color: #666;
+        }
+        .report-title {
+            font-size: 18px;
+            color: #444;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .generated-date {
+            text-align: right;
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <!-- Logo added here -->
+        <img src="C:\Users\HP\Leave_mngt\app\templates\ISTL Logo.png" alt="Company Logo" class="logo">
+        <div class="company-info">
+            <h1>Innovative Software Technologies Limited Africa</h1>
+            <p>Woodvale Groove, Westlands, Kenya</p>
+        </div>
+    </div>
+
+    <div class="generated-date">
+        Generated on: {{ generated_date }}
+    </div>
+
+    <div class="report-title">
+        Staff Report - {{ department }}
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Gender</th>
+                <th>Join Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for employee in employees %}
+            <tr>
+                <td>{{ employee.Name }}</td>
+                <td>{{ employee.Email }}</td>
+                <td>{{ employee.Role }}</td>
+                <td>{{ employee.Gender }}</td>
+                <td>{{ employee['Join Date'] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <p>Innovative Software Technologies Limited &copy; {{ generated_date.split()[0] }}</p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+venv/
+instance/
+.env.*
+*.sqlite3
+
+# PDF & log files
+*.pdf
+*.log
+

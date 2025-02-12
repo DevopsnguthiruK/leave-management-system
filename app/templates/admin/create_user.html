@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create User</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <nav class="bg-blue-600 shadow-sm px-6 py-4">
+        <div class="flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-white">Create User</h1>
+            <a href="{{ url_for('admin.dashboard') }}" class="text-white hover:text-white">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </nav>
+
+    <div class="p-6">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} mb-4 p-4 rounded-lg {% if category == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Create User Form -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="p-6">
+                <h2 class="text-lg font-semibold mb-4">Create New User</h2>
+                <form action="{{ url_for('admin.create_user') }}" method="POST" class="space-y-4" id="createUserForm">
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Name</label>
+                            {{ form.name(class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500") }}
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Email</label>
+                            {{ form.email(class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500") }}
+                        </div>
+                    
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Password</label>
+                            {{ form.password(class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500") }}
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Department</label>
+                            {{ form.department_id(class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500") }}
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Role</label>
+                            {{ form.role(class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500") }}
+                        </div>
+                    
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Gender</label>
+                            {{ form.gender(class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500") }}
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <a href="{{ url_for('admin.dashboard') }}"
+                           class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                            Cancel
+                        </a>
+                        <button type="submit"
+                                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                            Create User
+                        </button>
+                    </div>
+                </form>
+
+                <script>
+                document.getElementById('createUserForm').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const form = e.target;
+                    const submitButton = form.querySelector('button[type="submit"]');
+                    submitButton.disabled = true;
+
+                    try {
+                        const formData = new FormData(form);
+                        const response = await fetch('{{ url_for("admin.create_user") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                            },
+                            body: formData
+                        });
+
+                        if (response.redirected) {
+                            window.location.href = response.url;
+                            return;
+                        }
+
+                        const data = await response.text();
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(data, 'text/html');
+                        
+                        document.documentElement.innerHTML = doc.documentElement.innerHTML;
+
+                    } catch (error) {
+                        console.error('Error creating user:', error);
+                        const flashMessage = document.createElement('div');
+                        flashMessage.className = 'alert alert-error mb-4 p-4 rounded-lg bg-red-100 text-red-700';
+                        flashMessage.textContent = 'An unexpected error occurred. Please try again.';
+                        form.insertBefore(flashMessage, form.firstChild);
+                    } finally {
+                        submitButton.disabled = false;
+                    }
+                });
+                </script>
+            </div>
+        </div>
+    </div>
+</body>
+<script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+</html>

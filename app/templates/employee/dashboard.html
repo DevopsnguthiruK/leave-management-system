@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <!-- Top Navigation -->
+    <nav class="bg-yellow-600 shadow-sm px-6 py-4">
+        <div class="flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-white">ISTL AFRICA LEAVE APPLICATION</h1>
+            <div class="flex items-center space-x-4">
+                <button onclick="document.getElementById('leaveRequestModal').classList.remove('hidden')"
+                        class="bg-white text-gray-600 px-4 py-2 rounded-lg hover:bg-white transition-colors">
+                    Request Leave
+                </button>
+                <div class="relative">
+                    <button id="notificationBtn" class="p-2 text-white hover:text-white focus:outline-none">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                        </svg>
+                        <span id="unreadBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
+                    </button>
+                </div>
+                <div class="relative">
+                    <button id="userMenuToggle" class="focus:outline-none">
+                        <i class="fas fa-user-circle text-xl text-white"></i>
+                    </button>
+                    <div id="userMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl z-20">
+                        <div class="px-4 py-2 border-b border-gray-200">
+                            <p class="text-sm font-medium text-gray-800">{{ current_user.name }}</p>
+                        </div>
+                        <a href="{{ url_for('auth.logout') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} mb-4 p-4 mx-6 mt-4 rounded-lg {% if category == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="p-6">
+        <!-- Leave Balance Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            {% for balance, leave_type in leave_balances %}
+            <div class="bg-blue-500 rounded-lg shadow p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-medium text-white">{{ leave_type.name }}</h3>
+                    <i class="fas fa-clock text-white"></i>
+                </div>
+                <p class="text-2xl  text-white font-bold">{{ balance.remaining_days }}</p>
+                <p class="text-sm text-white">of {{ balance.total_days }} days remaining</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Calendar Section -->
+        <div class="bg-white rounded-lg shadow mb-6">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-bold">Calendar</h2>
+                    <div class="flex space-x-2">
+                        <form method="GET" class="flex items-center space-x-2">
+                            <input type="month" name="month" value="{{ current_month }}" 
+                                   class="border rounded px-2 py-1"
+                                   onchange="this.form.submit()">
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 overflow-x-auto">
+                <table class="w-full border-collapse">
+                    <thead>
+                        <tr>
+                            {% for day in ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+                            <th class="p-2 border text-sm font-medium text-gray-600">{{ day }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for week in calendar_weeks %}
+                        <tr>
+                            {% for day in week %}
+                            <td class="p-2 text-center border relative h-24 {% if day.is_weekend %}bg-gray-100{% endif %} 
+                                       {% if day.is_holiday %}bg-blue-100{% endif %}">
+                                {% if day.day %}
+                                <span class="absolute top-1 left-1">{{ day.day }}</span>
+                                {% if day.is_holiday %}
+                                <span class="absolute bottom-1 left-1 text-xs text-blue-600">{{ day.holiday_name }}</span>
+                                {% endif %}
+                                {% if day.has_leave %}
+                                <span class="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full"></span>
+                                {% endif %}
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Leave Requests Section -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-xl font-bold">My Leave Requests</h2>
+            </div>
+            <div class="p-6 overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dates</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for request in leave_requests %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap">{{ request.leave_type.name }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">{{ request.duration }} days</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {{ request.start_date.strftime('%Y-%m-%d') }} to {{ request.end_date.strftime('%Y-%m-%d') }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-full
+                                    {% if request.status == 'approved' %}bg-green-100 text-green-800
+                                    {% elif request.status == 'rejected' %}bg-red-100 text-red-800
+                                    {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                                    {{ request.status }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">{{ request.reason }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>  
+            </div>
+        </div>
+    </div>
+
+    <!-- Leave Request Modal -->
+    <div id="leaveRequestModal" class="hidden fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Request Leave</h3>
+                <button onclick="document.getElementById('leaveRequestModal').classList.add('hidden')"
+                        class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form action="{{ url_for('employee.submit_leave_request') }}" method="POST" class="space-y-4">
+                         
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Leave Type</label>
+                    <select name="leave_type_id" required
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                        {% for type in leave_types %}
+                        <option value="{{ type.id }}">{{ type.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Start Date</label>
+                    <input type="date" name="start_date" required
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">End Date</label>
+                    <input type="date" name="end_date" required
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Reason</label>
+                    <textarea name="reason" required rows="3"
+                              class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"></textarea>
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button type="button"
+                            onclick="document.getElementById('leaveRequestModal').classList.add('hidden')"
+                            class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                        Submit Request
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Notification Modal Section -->
+    <div id="notificationModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl w-full max-w-md">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between p-4 border-b">
+                <h3 class="text-lg font-semibold text-gray-900">Notifications</h3>
+                <div class="flex items-center gap-4">
+                    <button id="markAllReadBtn" class="text-sm text-blue-600 hover:text-blue-800 hidden">
+                        Mark all as read
+                    </button>
+                    <button id="closeModalBtn" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Notifications Container -->
+            <div class="max-h-[400px] overflow-y-auto">
+                <div id="notificationsContainer" class="divide-y divide-gray-200">
+                    <!-- Notifications will be inserted here -->
+                </div>
+                <div id="loadingState" class="py-4 text-center text-gray-500 hidden">
+                    Loading notifications...
+                </div>
+                <div id="errorState" class="py-4 text-center text-red-500 hidden">
+                    Failed to load notifications
+                </div>
+                <div id="emptyState" class="py-4 text-center text-gray-500 hidden">
+                    No notifications
+                </div>
+            </div>
+            
+            <!-- Pagination -->
+            <div id="paginationContainer" class="border-t p-4 flex justify-center gap-2 hidden">
+                <button id="prevPageBtn" class="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded hover:bg-gray-200 disabled:opacity-50">
+                    Previous
+                </button>
+                <button id="nextPageBtn" class="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded hover:bg-gray-200 disabled:opacity-50">
+                    Next
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('notificationModal');
+        const notificationBtn = document.getElementById('notificationBtn');
+        const closeModalBtn = document.getElementById('closeModalBtn');
+        const notificationsContainer = document.getElementById('notificationsContainer');
+        const loadingState = document.getElementById('loadingState');
+        const errorState = document.getElementById('errorState');
+        const emptyState = document.getElementById('emptyState');
+        const unreadBadge = document.getElementById('unreadBadge');
+        const markAllReadBtn = document.getElementById('markAllReadBtn');
+        const prevPageBtn = document.getElementById('prevPageBtn');
+        const nextPageBtn = document.getElementById('nextPageBtn');
+        const paginationContainer = document.getElementById('paginationContainer');
+        
+        let currentPage = 1;
+        let totalPages = 1;
+
+        // Toggle modal
+        notificationBtn.addEventListener('click', () => {
+            modal.classList.remove('hidden');
+            fetchNotifications(1);
+        });
+
+        closeModalBtn.addEventListener('click', () => {
+            modal.classList.add('hidden');
+        });
+
+        // Close modal when clicking outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.add('hidden');
+            }
+        });
+
+        // Inside your existing DOMContentLoaded event listener:
+        async function fetchNotifications(page) {
+            try {
+                showLoading();
+                const token = localStorage.getItem('access_token');
+                
+                // Debug logging
+                console.log('Token present:', !!token);
+                
+                const response = await fetch(`/notifications?page=${page}&per_page=10`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                // Debug logging
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error('Server error:', errorData);
+                    throw new Error(`Failed to fetch notifications: ${errorData.message || response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Notification data:', data); // Debug logging
+                
+                renderNotifications(data.notifications);
+                updatePagination(data);
+                updateUnreadCount(data.notifications);
+                currentPage = data.current_page;
+                totalPages = data.total_pages;
+                
+                // Show/hide mark all read button
+                const hasUnread = data.notifications.some(n => !n.is_read);
+                markAllReadBtn.classList.toggle('hidden', !hasUnread);
+                
+            } catch (err) {
+                showError();
+                console.error('Error fetching notifications:', err);
+                errorState.textContent = `Error: ${err.message}`; // Show error message to user
+            }
+        }
+
+        // Add missing updatePagination function
+        function updatePagination(data) {
+            if (data.total_pages > 1) {
+                paginationContainer.classList.remove('hidden');
+                prevPageBtn.disabled = !data.has_prev;
+                nextPageBtn.disabled = !data.has_next;
+            } else {
+                paginationContainer.classList.add('hidden');
+            }
+        }
+
+        // Add missing updateUnreadCount function
+        function updateUnreadCount(notifications) {
+            const unreadCount = notifications.filter(n => !n.is_read).length;
+            if (unreadCount > 0) {
+                unreadBadge.textContent = unreadCount;
+                unreadBadge.classList.remove('hidden');
+            } else {
+                unreadBadge.classList.add('hidden');
+            }
+        }
+        function renderNotifications(notifications) {
+            hideStates();
+            
+            if (notifications.length === 0) {
+                showEmpty();
+                return;
+            }
+
+            notificationsContainer.innerHTML = notifications.map(notification => `
+                <div class="p-4 ${notification.is_read ? 'bg-gray-50' : 'bg-white border-l-4 border-blue-500'}">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <p class="text-sm text-gray-900">${notification.message}</p>
+                            ${notification.status ? `
+                                <div class="mt-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                        ${notification.status === 'approved' ? 'bg-green-100 text-green-800' : 
+                                        notification.status === 'rejected' ? 'bg-red-100 text-red-800' : 
+                                        'bg-yellow-100 text-yellow-800'}">
+                                        ${notification.status.charAt(0).toUpperCase() + notification.status.slice(1)}
+                                    </span>
+                                </div>
+                            ` : ''}
+                            ${notification.rejection_reason ? `
+                                <p class="mt-1 text-sm text-red-600">
+                                    Reason: ${notification.rejection_reason}
+                                </p>
+                            ` : ''}
+                            <div class="mt-1 flex justify-between items-center text-xs text-gray-500">
+                                <span>${new Date(notification.created_at).toLocaleString()}</span>
+                                ${notification.reference_type === 'leave_request' ? 
+                                    `<span class="text-blue-600">Leave Request #${notification.reference_id}</span>` : 
+                                    ''}
+                            </div>
+                        </div>
+                        <span class="ml-2 px-2 py-1 text-xs rounded-full ${getTypeColor(notification.type)}">
+                            ${notification.type}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        markAllReadBtn.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/notifications/mark-read', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    },
+                    body: JSON.stringify({ notification_ids: [] })
+                });
+                
+                if (!response.ok) throw new Error('Failed to mark notifications as read');
+                fetchNotifications(currentPage);
+                
+            } catch (err) {
+                console.error('Error marking notifications as read:', err);
+            }
+        });
+        prevPageBtn.addEventListener('click', () => {
+            if (currentPage > 1) {
+                fetchNotifications(currentPage - 1);
+            }
+        });
+
+        nextPageBtn.addEventListener('click', () => {
+            if (currentPage < totalPages) {
+                fetchNotifications(currentPage + 1);
+            }
+        });
+
+        function showLoading() {
+            hideStates();
+            loadingState.classList.remove('hidden');
+        }
+
+        function showError() {
+            hideStates();
+            errorState.classList.remove('hidden');
+        }
+
+        function showEmpty() {
+            hideStates();
+            emptyState.classList.remove('hidden');
+        }
+
+        function hideStates() {
+            loadingState.classList.add('hidden');
+            errorState.classList.add('hidden');
+            emptyState.classList.add('hidden');
+            notificationsContainer.innerHTML = '';
+        }
+
+        function getTypeColor(type) {
+            const colors = {
+                success: 'bg-green-100 text-green-800',
+                error: 'bg-red-100 text-red-800',
+                info: 'bg-blue-100 text-blue-800'
+            };
+            return colors[type] || colors.info;
+        }
+    });
+        // User Menu Toggle
+        const userMenuToggle = document.getElementById('userMenuToggle');
+        const userMenu = document.getElementById('userMenu');
+
+        userMenuToggle.addEventListener('click', () => {
+            userMenu.classList.toggle('hidden');
+        });
+
+        // Close menu when clicking outside
+        window.addEventListener('click', (event) => {
+            if (!userMenuToggle.contains(event.target) && !userMenu.contains(event.target)) {
+                userMenu.classList.add('hidden');
+            }
+        });
+
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            const leaveRequestModal = document.getElementById('leaveRequestModal');
+            const notificationsModal = document.getElementById('notificationsModal');
+            if (event.target == leaveRequestModal) {
+                leaveRequestModal.classList.add('hidden');
+            }
+            if (event.target == notificationsModal) {
+                notificationsModal.classList.add('hidden');
+            }
+        }
+
+        // Replace the form's onsubmit with a fetch request
+        document.querySelector('form[action="{{ url_for("employee.submit_leave_request") }}"]').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const startDate = new Date(document.querySelector('input[name="start_date"]').value);
+            const endDate = new Date(document.querySelector('input[name="end_date"]').value);
+            const today = new Date();
+            
+            if (startDate < today) {
+                alert('Start date cannot be in the past');
+                return;
+            }
+            if (endDate < startDate) {
+                alert('End date must be after start date');
+                return;
+            }
+
+            const formData = {
+                leave_type_id: document.querySelector('select[name="leave_type_id"]').value,
+                start_date: document.querySelector('input[name="start_date"]').value,
+                end_date: document.querySelector('input[name="end_date"]').value,
+                reason: document.querySelector('textarea[name="reason"]').value
+            };
+
+            fetch('{{ url_for("employee.submit_leave_request") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + localStorage.getItem('access_token')  // Assuming you store the JWT token in localStorage
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message.includes('successfully')) {
+                    alert(data.message);
+                    location.reload();  // Reload to show updated leave requests
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while submitting the leave request');
+            });
+        });
+    </script>
+</body>
+</html>

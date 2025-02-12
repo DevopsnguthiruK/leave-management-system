@@ -1,0 +1,253 @@
+{# templates/admin/roles.html #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Roles</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <nav class="bg-purple-600 shadow-sm px-6 py-4">
+        <div class="flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-white">Manage Roles</h1>
+            <a href="{{ url_for('admin.dashboard') }}" class="text-white hover:text-white">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+    </nav>
+
+    <div class="p-6">
+        <div class="bg-white rounded-lg shadow">
+            <div class="p-6">
+                <div class="mb-4 flex justify-between items-center">
+                    <h2 class="text-lg font-semibold">User Roles</h2>
+                    <div class="flex space-x-4">
+                        <select id="departmentFilter" class="rounded-md border-gray-300">
+                            <option value="">All Departments</option>
+                            {% for dept in departments %}
+                            <option value="{{ dept.id }}">{{ dept.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <select id="roleFilter" class="rounded-md border-gray-300">
+                            <option value="">All Roles</option>
+                            <option value="employee">Employee</option>
+                            <option value="approver">Approver</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Current Role</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for user in users %}
+                            <tr data-department="{{ user.department_id }}" data-role="{{ user.role }}">
+                                <td class="px-6 py-4">{{ user.name }}</td>
+                                <td class="px-6 py-4">{{ user.email }}</td>
+                                <td class="px-6 py-4">{{ user.department.name if user.department else 'No Department' }}</td>
+                                <td class="px-6 py-4">
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full 
+                                        {% if user.role == 'admin' %}bg-purple-100 text-purple-800
+                                        {% elif user.role == 'approver' %}bg-blue-100 text-blue-800
+                                        {% else %}bg-green-100 text-green-800{% endif %}">
+                                        {{ user.role|title }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 flex space-x-2">
+                                    <button onclick="openRoleModal('{{ user.id }}', '{{ user.name }}', '{{ user.role }}')"
+                                            class="text-blue-600 hover:text-blue-900">
+                                        Change Role
+                                    </button>
+                                    <button onclick="confirmDeleteUser('{{ user.id }}', '{{ user.name }}')"
+                                            class="text-red-600 hover:text-red-900">
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Role Change Modal -->
+    <div id="roleModal" class="hidden fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Change User Role</h3>
+                <button onclick="closeRoleModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="roleForm" class="space-y-4">
+                <input type="hidden" id="userId">
+                <p id="userName" class="text-gray-600"></p>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">New Role</label>
+                    <select id="newRole" class="mt-1 block w-full rounded-md border-gray-300">
+                        <option value="employee">Employee</option>
+                        <option value="approver">Approver</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="closeRoleModal()"
+                            class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                        Update Role
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete User Confirmation Modal -->
+    <div id="deleteUserModal" class="hidden fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-red-600">Confirm Delete</h3>
+                <button onclick="closeDeleteModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <p>Are you sure you want to delete user: <span id="deleteUserName" class="font-bold"></span>?</p>
+                <input type="hidden" id="deleteUserId">
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="closeDeleteModal()"
+                            class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button type="button" onclick="deleteUser()"
+                            class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Role modal functions
+        function openRoleModal(userId, userName, currentRole) {
+            document.getElementById('userId').value = userId;
+            document.getElementById('userName').textContent = `Update role for ${userName}`;
+            document.getElementById('newRole').value = currentRole;
+            document.getElementById('roleModal').classList.remove('hidden');
+        }
+
+        function closeRoleModal() {
+            document.getElementById('roleModal').classList.add('hidden');
+        }
+
+        // Handle role update
+        document.getElementById('roleForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const userId = document.getElementById('userId').value;
+            const newRole = document.getElementById('newRole').value;
+            const submitButton = e.target.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+
+            try {
+                const response = await fetch(`/admin/users/${userId}/role`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    },
+                    body: JSON.stringify({ role: newRole })
+                });
+
+                if (response.status === 401) {
+                    window.location.href = '/auth/login';
+                    return;
+                }
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to update role');
+                }
+
+                window.location.reload();
+            } catch (error) {
+                console.error('Error updating role:', error);
+                alert(error.message || 'Failed to update role. Please try again.');
+            } finally {
+                submitButton.disabled = false;
+            }
+        });
+
+        // Filtering functionality
+        function filterUsers() {
+            const departmentFilter = document.getElementById('departmentFilter').value;
+            const roleFilter = document.getElementById('roleFilter').value;
+            
+            const rows = document.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const departmentMatch = !departmentFilter || row.dataset.department === departmentFilter;
+                const roleMatch = !roleFilter || row.dataset.role === roleFilter;
+                row.style.display = departmentMatch && roleMatch ? '' : 'none';
+            });
+        }
+
+        document.getElementById('departmentFilter').addEventListener('change', filterUsers);
+        document.getElementById('roleFilter').addEventListener('change', filterUsers);
+
+        // Delete User Functionality
+        function confirmDeleteUser(userId, userName) {
+            document.getElementById('deleteUserId').value = userId;
+            document.getElementById('deleteUserName').textContent = userName;
+            document.getElementById('deleteUserModal').classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteUserModal').classList.add('hidden');
+        }
+
+        async function deleteUser() {
+            const userId = document.getElementById('deleteUserId').value;
+            
+            try {
+                const response = await fetch(`/admin/users/${userId}/delete`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    }
+                });
+
+                if (response.status === 401) {
+                    window.location.href = '/auth/login';
+                    return;
+                }
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to delete user');
+                }
+
+                window.location.reload();
+            } catch (error) {
+                console.error('Error deleting user:', error);
+                alert(error.message || 'Failed to delete user. Please try again.');
+            }
+        }
+    </script>
+</body>
+</html>

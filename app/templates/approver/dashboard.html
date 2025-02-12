@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Approver Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <!-- Top Navigation -->
+    <nav class="bg-blue-600 shadow-sm px-6 py-4">
+        <div class="flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-white">ISTL AFRICA HRM SYSTEM</h1>
+            <div class="flex items-center space-x-4">
+                <button class="relative" onclick="document.getElementById('pendingRequestsModal').classList.remove('hidden')">
+                    <i class="fas fa-bell text-xl text-white"></i>
+                    <span class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">
+                        {{ pending_requests }}
+                    </span>
+                </button>
+                <div class="relative">
+                    <button id="userMenuToggle" class="focus:outline-none">
+                        <i class="fas fa-user-circle text-xl text-white"></i>
+                    </button>
+                    <div id="userMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl z-20">
+                        <div class="px-4 py-2 border-b border-gray-200">
+                            <p class="text-sm font-medium text-gray-800">{{ current_user.name }}</p>
+                        </div>
+                        <a href="{{ url_for('auth.logout') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="p-6">
+        <!-- Stats Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <!-- Active Users Card -->
+            <div class="bg-blue-600 rounded-lg shadow p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-medium text-white">Total Employees</h3>
+                    <i class="fas fa-users text-white"></i>
+                </div>
+                <p class="text-2xl font-bold text-white">{{ employee_count }}</p>
+            </div>
+
+            <!-- Departments Card -->
+            <div class="bg-green-600 rounded-lg shadow p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-medium text-white">Departments</h3>
+                    <i class="fas fa-building text-white"></i>
+                </div>
+                <p class="text-2xl font-bold text-white">{{ departments_count }}</p>
+            </div>
+
+            <!-- Pending Requests Card -->
+            <div class="bg-yellow-600 rounded-lg shadow p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-medium text-white">Pending Requests</h3>
+                    <i class="fas fa-clock text-white"></i>
+                </div>
+                <p class="text-2xl font-bold text-white">{{ pending_requests }}</p>
+            </div>
+        </div>
+
+        <!-- Reports Section -->
+        <div class="mb-6">
+            <div class="flex flex-wrap gap-4">
+                <button onclick="showReport('leave-requests')" 
+                        class="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-file-alt mr-2"></i>
+                    Leave Requests Report
+                </button>
+                <button onclick="showReport('staff')"
+                        class="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                    <i class="fas fa-users mr-2"></i>
+                    Staff Report
+                </button>
+                <button onclick="showReport('leave-utilization')"
+                        class="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                    <i class="fas fa-chart-pie mr-2"></i>
+                    Leave Utilization Report
+                </button>
+            </div>
+        </div>
+
+        <!-- Employee Leave Balances -->
+        <div class="bg-white rounded-lg shadow mb-6">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-xl font-bold">Employee Leave Balances</h2>
+            </div>
+            <div class="p-6 overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
+                            {% for leave_type in leave_types %}
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                {{ leave_type.name }}
+                            </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for employee in employees %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap">{{ employee.employee.name }}</td>
+                            {% for leave_type in leave_types %}
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm">
+                                    {% if employee.balances[leave_type.name] == 'N/A' %}
+                                    <div class="font-medium text-gray-400">N/A</div>
+                                    {% else %}
+                                    <div class="font-medium text-gray-900">
+                                        {{ employee.balances[leave_type.name] }} days
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Update the Pending Requests Modal section in dashboard.html -->
+        <div id="pendingRequestsModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium">Pending Leave Requests</h3>
+                    <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dates</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for request in department_requests %}
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ request.user.name }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ request.user.department.name }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ request.leave_type.name }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ request.duration }} days</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {{ request.start_date.strftime('%Y-%m-%d') }} to {{ request.end_date.strftime('%Y-%m-%d') }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex space-x-2">
+                                        <button onclick="handleLeaveRequest({{ request.id }}, 'approved')" 
+                                                class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700">
+                                            Approve
+                                        </button>
+                                        <button onclick="handleLeaveRequest({{ request.id }}, 'rejected')"
+                                                class="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700">
+                                            Reject
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add this rejection reason modal -->
+        <div id="rejectionModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium">Rejection Reason</h3>
+                    <button onclick="closeRejectionModal()" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="mt-2">
+                    <textarea id="rejectionReason" class="w-full p-2 border rounded-md" rows="4" placeholder="Enter rejection reason..."></textarea>
+                </div>
+                <div class="mt-4 flex justify-end space-x-2">
+                    <button onclick="closeRejectionModal()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">
+                        Cancel
+                    </button>
+                    <button onclick="submitRejection()" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+                        Submit
+                    </button>
+                </div>
+            </div>
+        </div>
+    <script>
+    // Store the current request ID and add event listeners when document loads
+    document.addEventListener('DOMContentLoaded', function() {
+        let currentRequestId = null;
+        
+        // Get modal elements
+        const pendingModal = document.getElementById('pendingRequestsModal');
+        const rejectionModal = document.getElementById('rejectionModal');
+        const userMenu = document.getElementById('userMenu');
+        const userMenuToggle = document.getElementById('userMenuToggle');
+        
+        // User menu toggle
+        userMenuToggle.addEventListener('click', function() {
+            userMenu.classList.toggle('hidden');
+        });
+
+        // Close user menu when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!userMenuToggle.contains(event.target) && !userMenu.contains(event.target)) {
+                userMenu.classList.add('hidden');
+            }
+        });
+        
+        // Functions to handle modals
+        window.closeModal = function() {
+            pendingModal.classList.add('hidden');
+        }
+        
+        window.closeRejectionModal = function() {
+            rejectionModal.classList.add('hidden');
+            document.getElementById('rejectionReason').value = '';
+        }
+        
+        // Handle leave requests
+        window.handleLeaveRequest = function(requestId, status) {
+            if (status === 'rejected') {
+                currentRequestId = requestId;
+                rejectionModal.classList.remove('hidden');
+            } else {
+                updateLeaveRequest(requestId, status);
+            }
+        }
+        
+        // Submit rejection
+        window.submitRejection = function() {
+            const reason = document.getElementById('rejectionReason').value.trim();
+            if (!reason) {
+                alert('Please provide a rejection reason');
+                return;
+            }
+            updateLeaveRequest(currentRequestId, 'rejected', reason);
+            closeRejectionModal();
+        }
+        
+        // Update leave request
+        window.updateLeaveRequest = async function(requestId, status, rejectionReason = null) {
+            try {
+                const token = localStorage.getItem('access_token');
+                if (!token) {
+                    window.location.href = '/auth/login';
+                    return;
+                }
+                
+                const response = await fetch(`/approver/request/${requestId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        status: status,
+                        rejection_reason: rejectionReason
+                    })
+                });
+                
+                if (response.status === 401) {
+                    window.location.href = '/auth/login';
+                    return;
+                }
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert(data.message || 'Request updated successfully');
+                    window.location.reload();
+                } else {
+                    alert(data.message || 'Failed to update request');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while updating the request');
+            }
+        }
+        
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            if (event.target === pendingModal) {
+                closeModal();
+            }
+            if (event.target === rejectionModal) {
+                closeRejectionModal();
+            }
+        }
+    });
+
+    // Show report function (moved outside DOMContentLoaded)
+    window.showReport = function(type) {
+        window.location.href = `/approver/reports/${type}`;
+    }
+    </script>
+</body>
+</html>

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <!-- Top Navigation -->
+    <nav class="bg-blue-600 shadow-sm px-6 py-4">
+        <div class="flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-white">ISTL AFRICA HRM SYSTEM</h1>
+            <div class="flex items-center space-x-4">
+                <button class="relative" onclick="document.getElementById('pendingRequestsModal').classList.remove('hidden')">
+                    <i class="fas fa-bell text-xl text-white"></i>
+                    <span class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">
+                        {{ pending_requests }}
+                    </span>
+                </button>
+                <div class="relative">
+                    <button id="userMenuToggle" class="focus:outline-none">
+                        <i class="fas fa-user-circle text-xl text-white"></i>
+                    </button>
+                    <div id="userMenu" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl z-20">
+                        <div class="px-4 py-2 border-b border-gray-200">
+                            <p class="text-sm font-medium text-gray-800">{{ current_user.name }}</p>
+                        </div>
+                        <a href="{{ url_for('auth.logout') }}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} mb-4">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="p-6">
+        <!-- Stats Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <!-- Active Users Card -->
+            <div class="bg-blue-600 rounded-lg shadow p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-medium text-white">Total Employees</h3>
+                    <i class="fas fa-users text-white"></i>
+                </div>
+                <p class="text-2xl font-bold text-white">{{ active_users }}</p>
+            </div>
+
+            <!-- Departments Card -->
+            <div class="bg-green-600 rounded-lg shadow p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-medium text-white">Departments</h3>
+                    <i class="fas fa-building text-white"></i>
+                </div>
+                <p class="text-2xl font-bold text-white">{{ departments_count }}</p>
+            </div>
+
+            <!-- Pending Requests Card -->
+            <div class="bg-yellow-600 rounded-lg shadow p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-medium text-white">Pending Requests</h3>
+                    <i class="fas fa-clock text-white"></i>
+                </div>
+                <p class="text-2xl font-bold text-white">{{ pending_requests }}</p>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap gap-4 mb-6">
+            <a href="{{ url_for('admin.create_user') }}" 
+                class="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-user-plus mr-2"></i>
+                    Create User
+            </a>
+            
+            <a href="{{ url_for('admin.manage_roles') }}" 
+                class="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                    <i class="fas fa-user-shield mr-2"></i>
+                    Manage Roles
+            </a>
+            
+            
+            <a href="{{ url_for('admin.manage_departments') }}" 
+               class="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                    <i class="fas fa-building mr-2"></i>
+                    Manage Departments
+            </a>
+
+            <a href="{{ url_for('admin.manage_holidays') }}" 
+                class="flex items-center px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors">
+                    <i class="fas fa-calendar-alt mr-2"></i>
+                    Manage Holidays
+            </a>
+        </div>
+
+        <!-- Departments Overview -->
+        <div class="bg-white rounded-lg shadow mb-6">
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-xl font-bold">Department Overview</h2>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {% for dept in departments %}
+                    <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium text-gray-600">{{ dept.code }}</span>
+                            <i class="fas fa-users text-gray-400"></i>
+                        </div>
+                        <h3 class="font-medium text-gray-900">{{ dept.name }}</h3>
+                        <p class="text-sm text-gray-500">{{ dept.employee_count }} Employee Count</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Requests Modal -->
+        <div id="pendingRequestsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full">
+            <div class="relative top-20 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">Pending Leave Requests</h3>
+                    <button onclick="document.getElementById('pendingRequestsModal').classList.add('hidden')"
+                            class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave Type</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reason</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for request in pending_leave_requests %}
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ request.user.name }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ request.user.department.name }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ request.leave_type.name }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ request.start_date.strftime('%Y-%m-%d') }} to {{ request.end_date.strftime('%Y-%m-%d') }}</td>
+                                <td class="px-6 py-4">{{ request.reason }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                        {{ request.status }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    <button onclick="updateLeaveRequest({{ request.id }}, 'approved')" 
+                                            class="text-green-600 hover:text-green-900 mr-3">
+                                        Approve
+                                    </button>
+                                    <button onclick="updateLeaveRequest({{ request.id }}, 'rejected')" 
+                                            class="text-red-600 hover:text-red-900">
+                                        Reject
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Rejection modal section -->
+    <div id="rejectionModal" class="hidden fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Reject Leave Request</h3>
+                <button onclick="document.getElementById('rejectionModal').classList.add('hidden')"
+                        class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Reason for Rejection
+                </label>
+                <textarea id="rejectionReason" 
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        rows="4"
+                        placeholder="Please provide a reason for rejecting this leave request..."></textarea>
+            </div>
+
+            <div class="flex justify-end space-x-3">
+                <button onclick="document.getElementById('rejectionModal').classList.add('hidden')"
+                        class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">
+                    Cancel
+                </button>
+                <button onclick="confirmRejectRequest()"
+                        class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+                    Confirm Rejection
+                </button>
+            </div>
+        </div>
+    </div>
+    <script>
+        let currentRequestId = null;
+
+        function showRejectionModal(requestId) {
+            currentRequestId = requestId;
+            document.getElementById('rejectionModal').classList.remove('hidden');
+            document.getElementById('rejectionReason').value = '';
+        }
+
+        async function confirmRejectRequest() {
+            const rejectionReason = document.getElementById('rejectionReason').value.trim();
+            
+            if (!rejectionReason) {
+                alert('Please provide a reason for rejection');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/admin/leave-requests/${currentRequestId}/update`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    },
+                    body: JSON.stringify({
+                        status: 'rejected',
+                        rejectionReason: rejectionReason
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update leave request');
+                }
+
+                // Hide modal and reload page
+                document.getElementById('rejectionModal').classList.add('hidden');
+                window.location.reload();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to reject leave request. Please try again.');
+            }
+        }
+
+        // Update the existing updateLeaveRequest function
+        async function updateLeaveRequest(requestId, status) {
+            if (status === 'rejected') {
+                showRejectionModal(requestId);
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/admin/leave-requests/${requestId}/update`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    },
+                    body: JSON.stringify({ status: status })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update leave request');
+                }
+
+                window.location.reload();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to update leave request. Please try again.');
+            }
+        } 
+        
+        // User Menu Toggle
+        const userMenuToggle = document.getElementById('userMenuToggle');
+        const userMenu = document.getElementById('userMenu');
+
+        userMenuToggle.addEventListener('click', () => {
+            userMenu.classList.toggle('hidden');
+        });
+
+        // Close menu when clicking outside
+        window.addEventListener('click', (event) => {
+            if (!userMenuToggle.contains(event.target) && !userMenu.contains(event.target)) {
+                userMenu.classList.add('hidden');
+            }
+        });
+
+        // Close modals when clicking outside
+        window.onclick = function(event) {
+            const createUserModal = document.getElementById('createUserModal');
+            const pendingRequestsModal = document.getElementById('pendingRequestsModal');
+            if (event.target == createUserModal) {
+                createUserModal.classList.add('hidden');
+            }
+            if (event.target == pendingRequestsModal) {
+                pendingRequestsModal.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
