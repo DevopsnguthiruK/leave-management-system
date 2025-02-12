@@ -9,8 +9,17 @@ from app.utils.decorators import approver_required
 import pandas as pd
 from io import BytesIO
 import pdfkit
+import platform
 
 approver_bp = Blueprint('approver', __name__)
+
+if platform.system() == 'Windows':
+    path_wkhtmltopdf = r'C:\Program Files\wkhtmltopdf\bin\wkhtmltopdf.exe'
+else:
+    # Common path for Linux installations
+    path_wkhtmltopdf = '/usr/bin/wkhtmltopdf'
+
+
 config = pdfkit.configuration(wkhtmltopdf='C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe')
 
 # Configure PDF options
